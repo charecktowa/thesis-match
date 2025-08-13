@@ -1,0 +1,12 @@
+# Pending to move to pyproject
+fastapi
+
+uvicorn
+
+sqlalchemy
+
+psycopg[binary]
+
+beautifulsoup4
+
+requests
