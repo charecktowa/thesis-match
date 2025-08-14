@@ -1,9 +1,9 @@
 import requests
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
-
+from db_handler import init_db, save_laboratory_data, get_lab_stats
 
 BASE_URL = "https://www.cic.ipn.mx/"
 
@@ -83,10 +83,17 @@ def extraer_informacion_investigadores(url):
     return investigadores
 
 
+def extraer_id(url):
+    # input www.enlace.com/algo/alg/13127
+    # extraer el último siempre que sean números
+    match = re.search(r"(\d+)$", url)
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def extraer_id_y_laboratorio(url):
     soup = get_soup(url)
-
-    save_to_file(soup)
 
     # Buscar cualquier iframe con src que contenga "saber"
     iframe = soup.find("iframe", src=re.compile(r"saber", re.I))
@@ -167,11 +174,44 @@ def main():
     for laboratorio in laboratorios:
         print("==============================================\n")
         print(f"Extrayendo metadatos de: {laboratorio}")
-        lab_info = extraer_metadatos(laboratorio)
 
-        profesores, alumnos = lab_info
+        try:
+            init_db()
+            profesores, alumnos_url = extraer_metadatos(laboratorio)
+            lab_id = extraer_id(alumnos_url)
 
-        # Guardar 
+            if not lab_id:
+                break
+
+            if lab_id:
+                # Check if all profesores have an 'id'
+                if all(profesor["id"] for profesor in profesores):
+                    print(f"Todos los profesores tienen ID: {lab_id}")
+
+                    laboratory_name = profesores[0]["laboratorio"]
+
+                    # Convertir formato de profesores para que coincida con el schema
+                    profesores_db = []
+                    for profesor in profesores:
+                        profesor_formatted = {
+                            "id": profesor["id"],
+                            "name": profesor["nombre"],  # cambiar 'nombre' por 'name'
+                            "email": profesor["correo"],  # cambiar 'correo' por 'email'
+                            "profile_url": profesor[
+                                "pagina"
+                            ],  # cambiar 'pagina' por 'profile_url'
+                            "laboratory_id": lab_id,
+                        }
+                        profesores_db.append(profesor_formatted)
+
+                    # Guardar en la base de datos
+                    save_laboratory_data(laboratory_name, lab_id, profesores_db)
+                else:
+                    print(f"Algunos profesores no tienen ID: {lab_id}")
+
+        except Exception as e:
+            print(f"Error al extraer datos de {laboratorio}: {e}")
+            break
 
 
 if __name__ == "__main__":

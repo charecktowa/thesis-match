@@ -21,6 +21,7 @@ class ProfessorCreate(BaseModel):
     name: str
     email: str | None
     profile_url: str
+    laboratory_id: int | None = None
 
 
 class ProfessorRead(BaseModel):
