@@ -1,28 +1,13 @@
-import requests
 import re
 from urllib.parse import urljoin
-from bs4 import BeautifulSoup
 
-from db_handler import init_db, save_laboratory_data, get_lab_stats
+from utils import get_soup
+from db_handler import init_db, save_laboratory_data
 
 BASE_URL = "https://www.cic.ipn.mx/"
 
 # Aquí encontramos todos los laboratorios
 TARGET_URL = "https://www.cic.ipn.mx/index.php/comunidad-menu/labscic"
-
-
-def get_soup(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    response.encoding = response.apparent_encoding
-
-    soup = BeautifulSoup(response.content, "html.parser")
-    return soup
-
-
-def save_to_file(data):
-    with open("output.html", "w", encoding="utf-8") as file:
-        file.write(data.prettify())
 
 
 def extraer_laboratorios(url):
@@ -100,7 +85,8 @@ def extraer_id_y_laboratorio(url):
 
     _id = None
     if iframe and "src" in iframe.attrs:
-        match = re.search(r"(\d{1,})$", iframe["src"])
+        # prev: match = re.search(r"(\d{1,})$", iframe["src"])
+        match = re.search(r"(\d+)$", str(iframe["src"]))
         if match:
             _id = int(match.group(1))
 

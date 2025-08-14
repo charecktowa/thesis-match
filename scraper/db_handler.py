@@ -79,10 +79,93 @@ def get_lab_stats():
     try:
         labs_count = db.query(models.Laboratory).count()
         profs_count = db.query(models.Professor).count()
+        students_count = db.query(models.Student).count()
         print(f"Laboratories count: {labs_count}")
         print(f"Professors count: {profs_count}")
+        print(f"Students count: {students_count}")
 
     except Exception as e:
         print(f"An error occurred: {e}")
+    finally:
+        db.close()
+
+
+def get_all_labs_id():
+    """Obtiene todos los IDs de laboratorios existentes"""
+    db = SessionLocal()
+    try:
+        labs = db.query(models.Laboratory.id).all()
+        return [lab.id for lab in labs]
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+    finally:
+        db.close()
+
+
+def save_student_data(students: list, lab_id: int) -> None:
+    """
+    Guarda estudiantes y sus asociaciones con laboratorios
+
+    Args:
+        students: Lista de diccionarios con datos de estudiantes
+        lab_id: ID del laboratorio
+    """
+    db = SessionLocal()
+
+    try:
+        for student_data in students:
+            if not student_data.get("id"):
+                print(
+                    f"Skipping student without ID: {student_data.get('nombre', 'Unknown')}"
+                )
+                continue
+
+            # Verificar si el estudiante ya existe
+            existing_student = (
+                db.query(models.Student)
+                .filter(models.Student.id == student_data["id"])
+                .first()
+            )
+
+            if not existing_student:
+                # Convertir formato para que coincida con el schema
+                student_formatted = {
+                    "id": student_data["id"],
+                    "name": student_data["nombre"],  # cambiar 'nombre' por 'name'
+                    "email": student_data.get("correo"),  # cambiar 'correo' por 'email'
+                    "profile_url": student_data.get(
+                        "pagina", ""
+                    ),  # cambiar 'pagina' por 'profile_url'
+                }
+
+                # Crear nuevo estudiante
+                student_model = models.Student(
+                    id=student_formatted["id"],
+                    name=student_formatted["name"],
+                    email=student_formatted.get("email"),
+                    profile_url=student_formatted.get("profile_url", ""),
+                )
+                db.add(student_model)
+                db.commit()
+                db.refresh(student_model)
+                print(f"Added student: {student_formatted['name']}")
+                existing_student = student_model
+            else:
+                print(f"Student already exists: {existing_student.name}")
+
+            # Agregar asociación con laboratorio usando CRUD
+            from app.db import crud
+
+            success = crud.add_student_to_laboratory(db, student_data["id"], lab_id)
+
+            if success:
+                print(
+                    f"Associated student {existing_student.name} with laboratory {lab_id}"
+                )
+
+    except Exception as e:
+        db.rollback()
+        print(f"An error occurred saving students: {e}")
     finally:
         db.close()
