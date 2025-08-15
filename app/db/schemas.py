@@ -53,6 +53,27 @@ class StudentRead(BasePerson):
         from_attributes = True
 
 
+# AcademicProgram
+class AcademicProgramCreate(BaseModel):
+    student_id: int
+    program: str  # MCC, MCIC, DCC
+    status: str  # inscrito, graduado, egresado
+    thesis_title: str | None = None
+    thesis_url: str | None = None
+
+
+class AcademicProgramRead(BaseModel):
+    id: int
+    student_id: int
+    program: str
+    status: str
+    thesis_title: str | None = None
+    thesis_url: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
 # Para asociaciones Student-Laboratory
 class StudentLaboratoryAssociation(BaseModel):
     student_id: int

@@ -1,6 +1,6 @@
 services:
   database:
-    image: postgres:latest
+    image: pgvector/pgvector:pg17 # PostgreSQL with pgvector support
     container_name: postgres_container
     environment:
       POSTGRES_USER: user
@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql
     networks:
       - app-network
     healthcheck:

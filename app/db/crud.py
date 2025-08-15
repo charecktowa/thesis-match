@@ -74,37 +74,101 @@ def get_student_by_email(db: Session, email: str) -> models.Student | None:
     return db.query(models.Student).filter(models.Student.email == email).first()
 
 
-def add_student_to_laboratory(db: Session, student_id: int, laboratory_id: int) -> bool:
-    """Asocia un estudiante con un laboratorio"""
-
-    # Verificar que el estudiante existe
+def update_student_status(db: Session, student_id: int, new_status: str) -> bool:
+    """Actualiza el status de un estudiante"""
     student = get_student_by_id(db, student_id)
     if not student:
-        print(f"Student {student_id} not found")
         return False
 
-    # Verificar que el laboratorio existe
-    laboratory = get_laboratory_by_id(db, laboratory_id)
-    if not laboratory:
-        print(f"Laboratory {laboratory_id} not found")
-        return False
-
-    # Verificar que no exceda el límite de 2 laboratorios
-    if len(student.laboratories) >= 2:
-        print(f"Student {student_id} already belongs to 2 laboratories")
-        return False
-
-    # Verificar que la asociación no exista ya
-    if laboratory in student.laboratories:
-        print(
-            f"Student {student_id} already associated with laboratory {laboratory_id}"
-        )
-        return False
-
-    # Crear la asociación
-    student.laboratories.append(laboratory)
+    # Para evitar problemas de tipado, actualizamos directamente con query
+    db.query(models.Student).filter(models.Student.id == student_id).update(
+        {"status": new_status}
+    )
     db.commit()
     return True
+
+
+# AcademicProgram CRUD operations
+def create_academic_program(
+    db: Session, academic_program: schemas.AcademicProgramCreate
+) -> models.AcademicProgram:
+    """Crear un programa académico para un estudiante"""
+    db_academic_program = models.AcademicProgram(
+        student_id=academic_program.student_id,
+        program=academic_program.program,
+        status=academic_program.status,
+        thesis_title=academic_program.thesis_title,
+        thesis_url=academic_program.thesis_url,
+    )
+    db.add(db_academic_program)
+    db.commit()
+    db.refresh(db_academic_program)
+    return db_academic_program
+
+
+def get_academic_programs_by_student(
+    db: Session, student_id: int
+) -> list[models.AcademicProgram]:
+    """Obtener todos los programas académicos de un estudiante"""
+    return (
+        db.query(models.AcademicProgram)
+        .filter(models.AcademicProgram.student_id == student_id)
+        .all()
+    )
+
+
+def get_academic_program_by_student_and_program(
+    db: Session, student_id: int, program: str
+) -> models.AcademicProgram | None:
+    """Obtener un programa académico específico de un estudiante"""
+    return (
+        db.query(models.AcademicProgram)
+        .filter(
+            models.AcademicProgram.student_id == student_id,
+            models.AcademicProgram.program == program,
+        )
+        .first()
+    )
+
+
+def update_academic_program_thesis(
+    db: Session,
+    student_id: int,
+    program: str,
+    thesis_title: str,
+    thesis_url: str | None = None,
+) -> bool:
+    """Actualizar información de tesis de un programa académico"""
+    update_data = {"thesis_title": thesis_title}
+    if thesis_url:
+        update_data["thesis_url"] = thesis_url
+
+    rows_affected = (
+        db.query(models.AcademicProgram)
+        .filter(
+            models.AcademicProgram.student_id == student_id,
+            models.AcademicProgram.program == program,
+        )
+        .update(update_data)
+    )
+
+    db.commit()
+    return rows_affected > 0
+
+
+def get_students_by_program_and_status(
+    db: Session, program: str, status: str
+) -> list[models.Student]:
+    """Obtener estudiantes por programa y estatus"""
+    return (
+        db.query(models.Student)
+        .join(models.AcademicProgram)
+        .filter(
+            models.AcademicProgram.program == program,
+            models.AcademicProgram.status == status,
+        )
+        .all()
+    )
 
 
 def get_students_by_laboratory(db: Session, laboratory_id: int) -> list[models.Student]:

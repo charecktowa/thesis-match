@@ -32,7 +32,7 @@ class Laboratory(Base):
 
 # Professor and Student will inherint from here
 class BasePerson(Base):
-    __abstract__ = True  # This class will not be mapped to a table
+    __abstract__ = True
     id = Column(Integer, primary_key=True, index=True, autoincrement=False)
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
@@ -57,3 +57,27 @@ class Student(BasePerson):
         secondary=student_laboratory_association,
         back_populates="students",
     )
+
+    # --- Nueva relación (One-to-Many) ---
+    # Un estudiante puede tener varios programas académicos asociados.
+    # `cascade` asegura que si borras un estudiante, sus registros académicos también se borren.
+    academic_programs = relationship(
+        "AcademicProgram", back_populates="student", cascade="all, delete-orphan"
+    )
+
+
+#
+class AcademicProgram(Base):
+    __tablename__ = "academic_programs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    program = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    thesis_title = Column(String, nullable=True)
+    thesis_url = Column(String, nullable=True)
+
+    # Cada registro de programa pertenece a un solo estudiante.
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+
+    # Permite acceder al objeto Student desde un AcademicProgram (ej: my_program.student)
+    student = relationship("Student", back_populates="academic_programs")
