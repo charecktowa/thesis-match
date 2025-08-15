@@ -35,7 +35,7 @@ class BasePerson(Base):
     __abstract__ = True  # This class will not be mapped to a table
     id = Column(Integer, primary_key=True, index=True, autoincrement=False)
     name = Column(String, nullable=False)
-    email = Column(String)
+    email = Column(String, nullable=True)
     profile_url = Column(String)
 
 
@@ -50,8 +50,6 @@ class Professor(BasePerson):
 
 class Student(BasePerson):
     __tablename__ = "students"
-
-    email = Column(String, nullable=True)
 
     # Un estudiante puede pertenecer a varios laboratorios (many-to-many)
     laboratories = relationship(

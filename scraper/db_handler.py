@@ -103,6 +103,21 @@ def get_all_labs_id():
         db.close()
 
 
+def create_fake_laboratory():
+    """Ya que hay alumnos egresados y que no pertenecen a ningun laboratorio, se crea un laboratorio ficticio."""
+    db = SessionLocal()
+    try:
+        fake_lab = models.Laboratory(id=999, name="Laboratorio Egresados")
+        db.add(fake_lab)
+        db.commit()
+        print("Created fake laboratory: Laboratorio Egresados")
+    except Exception as e:
+        db.rollback()
+        print(f"An error occurred while creating fake laboratory: {e}")
+    finally:
+        db.close()
+
+
 def save_student_data(students: list, lab_id: int) -> None:
     """
     Guarda estudiantes y sus asociaciones con laboratorios
