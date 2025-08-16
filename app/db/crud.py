@@ -66,6 +66,39 @@ def create_student(db: Session, student: schemas.StudentCreate) -> models.Studen
     return db_student
 
 
+def add_student_to_laboratory(db: Session, student_id: int, laboratory_id: int) -> bool:
+    """Asocia un estudiante con un laboratorio"""
+
+    # Verificar que el estudiante existe
+    student = get_student_by_id(db, student_id)
+    if not student:
+        print(f"Student {student_id} not found")
+        return False
+
+    # Verificar que el laboratorio existe
+    laboratory = get_laboratory_by_id(db, laboratory_id)
+    if not laboratory:
+        print(f"Laboratory {laboratory_id} not found")
+        return False
+
+    # Verificar que no exceda el límite de 2 laboratorios
+    if len(student.laboratories) >= 2:
+        print(f"Student {student_id} already belongs to 2 laboratories")
+        return False
+
+    # Verificar que la asociación no exista ya
+    if laboratory in student.laboratories:
+        print(
+            f"Student {student_id} already associated with laboratory {laboratory_id}"
+        )
+        return False
+
+    # Crear la asociación
+    student.laboratories.append(laboratory)
+    db.commit()
+    return True
+
+
 def get_student_by_id(db: Session, student_id: int) -> models.Student | None:
     return db.query(models.Student).filter(models.Student.id == student_id).first()
 
@@ -79,7 +112,6 @@ def update_student_status(db: Session, student_id: int, new_status: str) -> bool
     student = get_student_by_id(db, student_id)
     if not student:
         return False
-
     # Para evitar problemas de tipado, actualizamos directamente con query
     db.query(models.Student).filter(models.Student.id == student_id).update(
         {"status": new_status}
@@ -189,5 +221,104 @@ def get_laboratories_by_student(
         db.query(models.Laboratory)
         .join(models.student_laboratory_association)
         .filter(models.student_laboratory_association.c.student_id == student_id)
+        .all()
+    )
+
+
+# ResearchProduct CRUD operations
+def create_research_product(
+    db: Session, research_product: schemas.ResearchProductCreate
+) -> models.ResearchProduct:
+    """Crear un producto de investigación para un profesor"""
+    db_research_product = models.ResearchProduct(
+        professor_id=research_product.professor_id,
+        title=research_product.title,
+        site=research_product.site,
+        year=research_product.year,
+    )
+    db.add(db_research_product)
+    db.commit()
+    db.refresh(db_research_product)
+    return db_research_product
+
+
+def get_research_products_by_professor(
+    db: Session, professor_id: int
+) -> list[models.ResearchProduct]:
+    """Obtener todos los productos de investigación de un profesor"""
+    return (
+        db.query(models.ResearchProduct)
+        .filter(models.ResearchProduct.professor_id == professor_id)
+        .all()
+    )
+
+
+def get_research_product_by_title_and_professor(
+    db: Session, professor_id: int, title: str
+) -> models.ResearchProduct | None:
+    """Obtener un producto de investigación específico por título y profesor"""
+    return (
+        db.query(models.ResearchProduct)
+        .filter(
+            models.ResearchProduct.professor_id == professor_id,
+            models.ResearchProduct.title == title,
+        )
+        .first()
+    )
+
+
+def update_research_product(
+    db: Session,
+    professor_id: int,
+    title: str,
+    site: str | None = None,
+    year: int | None = None,
+) -> bool:
+    """Actualizar información de un producto de investigación"""
+    # Para evitar problemas de tipado, actualizamos directamente con query
+    if site and year:
+        rows_affected = (
+            db.query(models.ResearchProduct)
+            .filter(
+                models.ResearchProduct.professor_id == professor_id,
+                models.ResearchProduct.title == title,
+            )
+            .update({"site": site, "year": year})
+        )
+    elif site:
+        rows_affected = (
+            db.query(models.ResearchProduct)
+            .filter(
+                models.ResearchProduct.professor_id == professor_id,
+                models.ResearchProduct.title == title,
+            )
+            .update({"site": site})
+        )
+    elif year:
+        rows_affected = (
+            db.query(models.ResearchProduct)
+            .filter(
+                models.ResearchProduct.professor_id == professor_id,
+                models.ResearchProduct.title == title,
+            )
+            .update({"year": year})
+        )
+    else:
+        return False
+
+    db.commit()
+    return rows_affected > 0
+
+
+def get_research_products_by_year_range(
+    db: Session, start_year: int, end_year: int
+) -> list[models.ResearchProduct]:
+    """Obtener productos de investigación en un rango de años"""
+    return (
+        db.query(models.ResearchProduct)
+        .filter(
+            models.ResearchProduct.year >= start_year,
+            models.ResearchProduct.year <= end_year,
+        )
         .all()
     )

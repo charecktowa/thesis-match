@@ -74,6 +74,25 @@ class AcademicProgramRead(BaseModel):
         from_attributes = True
 
 
+# ResearchProduct
+class ResearchProductCreate(BaseModel):
+    professor_id: int
+    title: str
+    site: str  # Descripción/Revista donde se publicó
+    year: int
+
+
+class ResearchProductRead(BaseModel):
+    id: int
+    professor_id: int
+    title: str
+    site: str
+    year: int
+
+    class Config:
+        from_attributes = True
+
+
 # Para asociaciones Student-Laboratory
 class StudentLaboratoryAssociation(BaseModel):
     student_id: int

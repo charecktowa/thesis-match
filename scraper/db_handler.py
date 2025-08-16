@@ -190,8 +190,14 @@ def get_all_student_profile_urls() -> list:
     """Obtiene todas las URLs de perfil de estudiantes existentes"""
     db = SessionLocal()
     try:
-        students = db.query(models.Student).all()
-        return [student.profile_url for student in students if student.profile_url]
+        students = (
+            db.query(models.Student)
+            .filter(
+                models.Student.profile_url.isnot(None), models.Student.profile_url != ""
+            )
+            .all()
+        )
+        return [student.profile_url for student in students]
     except Exception as e:
         print(f"An error occurred: {e}")
         return []
@@ -351,5 +357,130 @@ def get_all_student_ids():
     except Exception as e:
         print(f"Error getting student IDs: {e}")
         return []
+    finally:
+        db.close()
+
+
+def get_all_professors_ids():
+    """Obtiene todos los IDs de profesores existentes"""
+    db = SessionLocal()
+    try:
+        professor_ids = db.query(models.Professor.id).all()
+        return [professor_id[0] for professor_id in professor_ids]
+    except Exception as e:
+        print(f"Error getting professor IDs: {e}")
+        return []
+    finally:
+        db.close()
+
+
+def save_research_product_data(professor_id: int, product_data: dict) -> None:
+    """
+    Guarda información de un producto de investigación para un profesor
+
+    Args:
+        professor_id: ID del profesor
+        product_data: Dict con keys: 'title', 'site', 'year'
+    """
+    db = SessionLocal()
+
+    try:
+        # Verificar si el profesor existe
+        professor_exists = (
+            db.query(models.Professor)
+            .filter(models.Professor.id == professor_id)
+            .first()
+        )
+
+        if not professor_exists:
+            print(f"Professor {professor_id} not found")
+            return
+
+        # Verificar si ya existe este producto para el profesor
+        existing_product = crud.get_research_product_by_title_and_professor(
+            db, professor_id, product_data["title"]
+        )
+
+        if existing_product:
+            # Actualizar información existente
+            success = crud.update_research_product(
+                db,
+                professor_id,
+                product_data["title"],
+                product_data.get("site"),
+                product_data.get("year"),
+            )
+            if success:
+                print(
+                    f"Updated research product '{product_data['title']}' for professor {professor_id}"
+                )
+        else:
+            # Crear nuevo producto de investigación
+            research_product_model = models.ResearchProduct(
+                professor_id=professor_id,
+                title=product_data["title"],
+                site=product_data["site"],
+                year=product_data["year"],
+            )
+
+            db.add(research_product_model)
+            db.commit()
+            print(
+                f"Created research product '{product_data['title']}' for professor {professor_id}"
+            )
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving research product for professor {professor_id}: {e}")
+    finally:
+        db.close()
+
+
+def save_multiple_research_products(professor_id: int, products_list: list) -> None:
+    """
+    Guarda múltiples productos de investigación para un profesor
+
+    Args:
+        professor_id: ID del profesor
+        products_list: Lista de diccionarios con información de productos
+    """
+    print(f"Saving {len(products_list)} research products for professor {professor_id}")
+
+    for product_data in products_list:
+        save_research_product_data(professor_id, product_data)
+
+
+def get_research_product_stats() -> None:
+    """Mostrar estadísticas de productos de investigación"""
+    db = SessionLocal()
+
+    try:
+        total_products = db.query(models.ResearchProduct).count()
+
+        # Contar productos por años recientes
+        from sqlalchemy import func
+
+        recent_products = (
+            db.query(models.ResearchProduct.year, func.count(models.ResearchProduct.id))
+            .filter(models.ResearchProduct.year >= 2020)
+            .group_by(models.ResearchProduct.year)
+            .order_by(models.ResearchProduct.year.desc())
+            .all()
+        )
+
+        # Contar profesores con productos
+        professors_with_products = (
+            db.query(models.ResearchProduct.professor_id).distinct().count()
+        )
+
+        print("\nResearch Product Statistics:")
+        print(f"   Total products: {total_products}")
+        print(f"   Professors with products: {professors_with_products}")
+        print("   Recent years:")
+        for year, count in recent_products:
+            print(f"     - {year}: {count} products")
+
+    except Exception as e:
+        print(f"Error getting research product stats: {e}")
     finally:
         db.close()

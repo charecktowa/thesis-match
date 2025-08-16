@@ -1,4 +1,5 @@
-from enum import Enum as PyEnum
+from enum import Enum as PyEnum, auto
+from turtle import title
 from sqlalchemy import Column, Integer, String, ForeignKey, Table, Enum
 from sqlalchemy.orm import relationship
 
@@ -46,6 +47,30 @@ class Professor(BasePerson):
 
     # Cada profesor pertenece a un laboratorio
     laboratory = relationship("Laboratory", back_populates="professors")
+
+    # Un profesor puede tener muchos productos de investigación
+    research_products = relationship(
+        "ResearchProduct", back_populates="professor", cascade="all, delete-orphan"
+    )
+
+
+class ResearchProduct(Base):
+    """
+    Papers and conferences (title, site and year)
+
+    A professor can have many research products.
+    """
+
+    __tablename__ = "research_products"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String, nullable=False)
+    site = Column(String, nullable=False)
+    year = Column(Integer, nullable=False)
+
+    # Cada producto de investigación pertenece a un profesor
+    professor_id = Column(Integer, ForeignKey("professors.id"), nullable=False)
+    professor = relationship("Professor", back_populates="research_products")
 
 
 class Student(BasePerson):

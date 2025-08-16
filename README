@@ -1,3 +1,10 @@
+## Order to run
+1. scraper_professor.py [labs, info prof]
+2. scraper_students_cic.py [estudiantes inscritos, labs]
+3. scraper_students_saber.py [todos + egresados]
+4. scraper_academic_info.py [extraer perfiles] [¿duplicados?]
+5. scraper_academic_research.py [extraer articulos y congresos]
+
 TODO:
 
 - [ ] Create a proper .env file
