@@ -53,6 +53,16 @@ class Professor(BasePerson):
         "ResearchProduct", back_populates="professor", cascade="all, delete-orphan"
     )
 
+    # Un profesor puede ser asesor principal en muchas tesis
+    advised_theses_primary = relationship(
+        "Thesis", foreign_keys="Thesis.advisor1_id", back_populates="advisor1"
+    )
+
+    # Un profesor puede ser asesor secundario en muchas tesis
+    advised_theses_secondary = relationship(
+        "Thesis", foreign_keys="Thesis.advisor2_id", back_populates="advisor2"
+    )
+
 
 class ResearchProduct(Base):
     """
@@ -90,6 +100,9 @@ class Student(BasePerson):
         "AcademicProgram", back_populates="student", cascade="all, delete-orphan"
     )
 
+    # Un estudiante puede tener una tesis
+    thesis = relationship("Thesis", back_populates="student", uselist=False)
+
 
 #
 class AcademicProgram(Base):
@@ -106,3 +119,36 @@ class AcademicProgram(Base):
 
     # Permite acceder al objeto Student desde un AcademicProgram (ej: my_program.student)
     student = relationship("Student", back_populates="academic_programs")
+
+
+class Thesis(Base):
+    """
+    Thesis information with advisors
+
+    A thesis belongs to one student and has 1-2 advisors (professors).
+    """
+
+    __tablename__ = "theses"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=False)
+    title = Column(String, nullable=False)
+
+    # Foreign key to student
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+
+    # Foreign keys to advisors (professors)
+    advisor1_id = Column(Integer, ForeignKey("professors.id"), nullable=False)
+    advisor2_id = Column(
+        Integer, ForeignKey("professors.id"), nullable=True
+    )  # Optional second advisor
+
+    # Relationships
+    student = relationship("Student", back_populates="thesis")
+    advisor1 = relationship(
+        "Professor", foreign_keys=[advisor1_id], back_populates="advised_theses_primary"
+    )
+    advisor2 = relationship(
+        "Professor",
+        foreign_keys=[advisor2_id],
+        back_populates="advised_theses_secondary",
+    )

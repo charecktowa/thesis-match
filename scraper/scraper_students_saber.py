@@ -1,5 +1,4 @@
-from sqlalchemy import null
-from utils import get_soup, extraer_id, save_to_file
+from utils import get_soup, extraer_id
 
 from db_handler import create_fake_laboratory, init_db, save_student_data
 

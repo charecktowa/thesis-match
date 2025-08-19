@@ -44,6 +44,12 @@ def get_professor_by_email(db: Session, email: str) -> models.Professor | None:
     return db.query(models.Professor).filter(models.Professor.email == email).first()
 
 
+def get_professor_by_id(db: Session, professor_id: int) -> models.Professor | None:
+    return (
+        db.query(models.Professor).filter(models.Professor.id == professor_id).first()
+    )
+
+
 def get_professors_by_lab_name(db: Session, lab_name: str) -> list[models.Professor]:
     return (
         db.query(models.Professor)
@@ -322,3 +328,53 @@ def get_research_products_by_year_range(
         )
         .all()
     )
+
+
+# Thesis CRUD operations
+def create_thesis(db: Session, thesis: schemas.ThesisCreate) -> models.Thesis:
+    db_thesis = models.Thesis(
+        id=thesis.id,
+        title=thesis.title,
+        student_id=thesis.student_id,
+        advisor1_id=thesis.advisor1_id,
+        advisor2_id=thesis.advisor2_id,
+    )
+    db.add(db_thesis)
+    db.commit()
+    db.refresh(db_thesis)
+    return db_thesis
+
+
+def get_thesis_by_id(db: Session, thesis_id: int) -> models.Thesis | None:
+    return db.query(models.Thesis).filter(models.Thesis.id == thesis_id).first()
+
+
+def get_thesis_by_student_id(db: Session, student_id: int) -> models.Thesis | None:
+    return (
+        db.query(models.Thesis).filter(models.Thesis.student_id == student_id).first()
+    )
+
+
+def get_theses_by_advisor(db: Session, professor_id: int) -> list[models.Thesis]:
+    """Obtiene todas las tesis donde un profesor es asesor (principal o secundario)"""
+    return (
+        db.query(models.Thesis)
+        .filter(
+            (models.Thesis.advisor1_id == professor_id)
+            | (models.Thesis.advisor2_id == professor_id)
+        )
+        .all()
+    )
+
+
+def update_thesis_advisor2(db: Session, thesis_id: int, advisor2_id: int) -> bool:
+    """Actualiza el segundo asesor de una tesis"""
+    thesis = get_thesis_by_id(db, thesis_id)
+    if not thesis:
+        return False
+
+    db.query(models.Thesis).filter(models.Thesis.id == thesis_id).update(
+        {"advisor2_id": advisor2_id}
+    )
+    db.commit()
+    return True

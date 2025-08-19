@@ -10,3 +10,7 @@ psycopg2-binary
 beautifulsoup4
 
 requests
+
+sentence-transformers
+
+torch==2.8.0

@@ -484,3 +484,147 @@ def get_research_product_stats() -> None:
         print(f"Error getting research product stats: {e}")
     finally:
         db.close()
+
+
+def save_thesis_data(thesis_data: dict) -> None:
+    """
+    Guarda información de una tesis
+
+    Args:
+        thesis_data: Dict con keys: 'id', 'title', 'student_id', 'advisor1_id', 'advisor2_id'
+    """
+    db = SessionLocal()
+
+    try:
+        # Verificar si la tesis ya existe
+        existing_thesis = crud.get_thesis_by_id(db, thesis_data["id"])
+
+        if existing_thesis:
+            print(f"Thesis {thesis_data['id']} already exists")
+            return
+
+        # Verificar que el estudiante existe
+        student_exists = crud.get_student_by_id(db, thesis_data["student_id"])
+        if not student_exists:
+            print(f"Student {thesis_data['student_id']} not found")
+            return
+
+        # Verificar que el asesor principal existe
+        advisor1_exists = crud.get_professor_by_id(db, thesis_data["advisor1_id"])
+        if not advisor1_exists:
+            print(f"Advisor1 {thesis_data['advisor1_id']} not found")
+            return
+
+        # Verificar que el asesor secundario existe (si se proporciona)
+        if thesis_data.get("advisor2_id"):
+            advisor2_exists = crud.get_professor_by_id(db, thesis_data["advisor2_id"])
+            if not advisor2_exists:
+                print(f"Advisor2 {thesis_data['advisor2_id']} not found")
+                return
+
+        # Crear nueva tesis
+        thesis_create = schemas.ThesisCreate(**thesis_data)
+        crud.create_thesis(db, thesis_create)
+
+        print(f"Created thesis '{thesis_data['title']}' (ID: {thesis_data['id']})")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving thesis {thesis_data.get('id', 'unknown')}: {e}")
+    finally:
+        db.close()
+
+
+def save_multiple_theses(theses_list: list) -> None:
+    """
+    Guarda múltiples tesis consolidando asesores cuando es necesario
+
+    Args:
+        theses_list: Lista de diccionarios con información de tesis
+    """
+    print(f"Processing {len(theses_list)} theses for consolidation...")
+
+    # Diccionario para consolidar tesis por ID
+    consolidated_theses = {}
+
+    for thesis_data in theses_list:
+        thesis_id = thesis_data["id"]
+
+        if thesis_id in consolidated_theses:
+            # Tesis ya existe, consolidar asesores
+            existing_thesis = consolidated_theses[thesis_id]
+
+            # Si esta entrada tiene advisor1_id y la existente no
+            if thesis_data.get("advisor1_id") and not existing_thesis.get(
+                "advisor1_id"
+            ):
+                existing_thesis["advisor1_id"] = thesis_data["advisor1_id"]
+
+            # Si esta entrada tiene advisor2_id y la existente no
+            if thesis_data.get("advisor2_id") and not existing_thesis.get(
+                "advisor2_id"
+            ):
+                existing_thesis["advisor2_id"] = thesis_data["advisor2_id"]
+
+        else:
+            # Nueva tesis
+            consolidated_theses[thesis_id] = thesis_data.copy()
+
+    # Asegurar que todas las tesis tengan al menos advisor1_id
+    valid_theses = []
+    for thesis_data in consolidated_theses.values():
+        if not thesis_data.get("advisor1_id") and thesis_data.get("advisor2_id"):
+            # Promover advisor2 a advisor1
+            thesis_data["advisor1_id"] = thesis_data["advisor2_id"]
+            thesis_data["advisor2_id"] = None
+
+        if thesis_data.get("advisor1_id"):  # Solo guardar si tiene al menos un asesor
+            valid_theses.append(thesis_data)
+
+    print(f"Consolidated to {len(valid_theses)} valid theses")
+
+    # Guardar las tesis consolidadas
+    for thesis_data in valid_theses:
+        save_thesis_data(thesis_data)
+
+
+def get_thesis_stats() -> None:
+    """Mostrar estadísticas de tesis"""
+    db = SessionLocal()
+
+    try:
+        total_theses = db.query(models.Thesis).count()
+
+        # Contar tesis con dos asesores
+        theses_with_two_advisors = (
+            db.query(models.Thesis)
+            .filter(models.Thesis.advisor2_id.isnot(None))
+            .count()
+        )
+
+        # Contar por asesor principal (top 5)
+        from sqlalchemy import func
+
+        top_advisors = (
+            db.query(
+                models.Professor.name,
+                func.count(models.Thesis.id).label("thesis_count"),
+            )
+            .join(models.Thesis, models.Professor.id == models.Thesis.advisor1_id)
+            .group_by(models.Professor.id, models.Professor.name)
+            .order_by(func.count(models.Thesis.id).desc())
+            .limit(5)
+            .all()
+        )
+
+        print("\nThesis Statistics:")
+        print(f"   Total theses: {total_theses}")
+        print(f"   Theses with two advisors: {theses_with_two_advisors}")
+        print("   Top advisors (as primary):")
+        for advisor_name, count in top_advisors:
+            print(f"     - {advisor_name}: {count} theses")
+
+    except Exception as e:
+        print(f"Error getting thesis stats: {e}")
+    finally:
+        db.close()

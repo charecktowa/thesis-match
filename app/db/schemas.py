@@ -97,3 +97,23 @@ class ResearchProductRead(BaseModel):
 class StudentLaboratoryAssociation(BaseModel):
     student_id: int
     laboratory_id: int
+
+
+# Thesis
+class ThesisCreate(BaseModel):
+    id: int
+    title: str
+    student_id: int
+    advisor1_id: int
+    advisor2_id: int | None = None
+
+
+class ThesisRead(BaseModel):
+    id: int
+    title: str
+    student_id: int
+    advisor1_id: int
+    advisor2_id: int | None = None
+
+    class Config:
+        from_attributes = True
