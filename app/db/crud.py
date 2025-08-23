@@ -368,13 +368,154 @@ def get_theses_by_advisor(db: Session, professor_id: int) -> list[models.Thesis]
 
 
 def update_thesis_advisor2(db: Session, thesis_id: int, advisor2_id: int) -> bool:
-    """Actualiza el segundo asesor de una tesis"""
-    thesis = get_thesis_by_id(db, thesis_id)
-    if not thesis:
-        return False
-
-    db.query(models.Thesis).filter(models.Thesis.id == thesis_id).update(
-        {"advisor2_id": advisor2_id}
+    """Actualizar el asesor secundario de una tesis"""
+    rows_affected = (
+        db.query(models.Thesis)
+        .filter(models.Thesis.id == thesis_id)
+        .update({"advisor2_id": advisor2_id})
     )
     db.commit()
-    return True
+    return rows_affected > 0
+
+
+# Professor additional CRUD operations for complex queries
+def get_professors_with_laboratory(db: Session):
+    """Obtiene todos los profesores con información de su laboratorio"""
+    return (
+        db.query(
+            models.Professor.id,
+            models.Professor.name,
+            models.Professor.email,
+            models.Professor.profile_url,
+            models.Professor.laboratory_id,
+            models.Laboratory.name.label("laboratory_name"),
+        )
+        .join(models.Laboratory)
+        .all()
+    )
+
+
+def get_professor_with_laboratory(db: Session, professor_id: int):
+    """Obtiene un profesor específico con información de su laboratorio"""
+    result = (
+        db.query(
+            models.Professor.id,
+            models.Professor.name,
+            models.Professor.email,
+            models.Professor.profile_url,
+            models.Professor.laboratory_id,
+            models.Laboratory.name.label("laboratory_name"),
+        )
+        .join(models.Laboratory)
+        .filter(models.Professor.id == professor_id)
+        .first()
+    )
+    return result
+
+
+def get_professor_with_research(
+    db: Session, professor_id: int
+) -> models.Professor | None:
+    """Obtiene un profesor con todos sus productos de investigación"""
+    return (
+        db.query(models.Professor).filter(models.Professor.id == professor_id).first()
+    )
+
+
+def get_professor_with_theses(
+    db: Session, professor_id: int
+) -> models.Professor | None:
+    """Obtiene un profesor con todas las tesis que ha asesorado"""
+    return (
+        db.query(models.Professor).filter(models.Professor.id == professor_id).first()
+    )
+
+
+# Student additional CRUD operations for complex queries
+def get_students_with_academic_info(db: Session):
+    """Obtiene todos los estudiantes con información académica y de tesis"""
+    return (
+        db.query(
+            models.Student.id,
+            models.Student.name,
+            models.Student.email,
+            models.Student.profile_url,
+            models.AcademicProgram.program,
+            models.AcademicProgram.status,
+            models.AcademicProgram.thesis_title,
+            models.AcademicProgram.thesis_url,
+        )
+        .join(models.AcademicProgram)
+        .join(models.Thesis)
+        .all()
+    )
+
+
+def get_student_with_academic_info(db: Session, student_id: int):
+    """Obtiene un estudiante específico con información académica y de tesis"""
+    return (
+        db.query(
+            models.Student.id,
+            models.Student.name,
+            models.Student.email,
+            models.Student.profile_url,
+            models.AcademicProgram.program,
+            models.AcademicProgram.status,
+            models.AcademicProgram.thesis_title,
+            models.AcademicProgram.thesis_url,
+        )
+        .join(models.AcademicProgram)
+        .join(models.Thesis)
+        .filter(models.Student.id == student_id)
+        .first()
+    )
+
+
+def get_student_with_laboratories(
+    db: Session, student_id: int
+) -> models.Student | None:
+    """Obtiene un estudiante con todos sus laboratorios"""
+    return db.query(models.Student).filter(models.Student.id == student_id).first()
+
+
+def get_student_with_thesis(db: Session, student_id: int) -> models.Student | None:
+    """Obtiene un estudiante con su tesis y programas académicos"""
+    return db.query(models.Student).filter(models.Student.id == student_id).first()
+
+
+def get_students_by_program(db: Session, program: str):
+    """Obtiene estudiantes por programa académico"""
+    return (
+        db.query(
+            models.Student.id,
+            models.Student.name,
+            models.Student.email,
+            models.Student.profile_url,
+            models.AcademicProgram.program,
+            models.AcademicProgram.status,
+            models.AcademicProgram.thesis_title,
+            models.AcademicProgram.thesis_url,
+        )
+        .join(models.AcademicProgram)
+        .filter(models.AcademicProgram.program == program)
+        .all()
+    )
+
+
+def get_students_by_status(db: Session, status: str):
+    """Obtiene estudiantes por estatus académico"""
+    return (
+        db.query(
+            models.Student.id,
+            models.Student.name,
+            models.Student.email,
+            models.Student.profile_url,
+            models.AcademicProgram.program,
+            models.AcademicProgram.status,
+            models.AcademicProgram.thesis_title,
+            models.AcademicProgram.thesis_url,
+        )
+        .join(models.AcademicProgram)
+        .filter(models.AcademicProgram.status == status)
+        .all()
+    )

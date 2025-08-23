@@ -117,3 +117,58 @@ class ThesisRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Esquemas para respuestas complejas de professor endpoints
+class ProfessorWithLaboratory(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    laboratory_id: int
+    laboratory_name: str
+
+
+class ProfessorResearch(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    research_products: list[ResearchProductRead] = []
+
+
+class ProfessorTheses(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    advised_theses: list[ThesisRead] = []
+
+
+# Esquemas para respuestas complejas de student endpoints
+class StudentWithAcademicInfo(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    program: str
+    status: str
+    thesis_title: str | None = None
+    thesis_url: str | None = None
+
+
+class StudentWithLaboratories(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    laboratories: list[LaboratoryRead] = []
+
+
+class StudentWithThesis(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    profile_url: str | None = None
+    thesis: ThesisRead | None = None
+    academic_programs: list[AcademicProgramRead] = []
