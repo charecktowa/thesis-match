@@ -14,3 +14,5 @@ requests
 sentence-transformers
 
 torch==2.8.0
+
+pgvector
