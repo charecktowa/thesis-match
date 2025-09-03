@@ -25,6 +25,151 @@ def get_laboratory_by_id(db: Session, laboratory_id: int) -> models.Laboratory |
     )
 
 
+# Funciones para sistema de recomendaciones
+def search_similar_theses_by_embedding(
+    db: Session, embedding: list[float], k: int = 10
+) -> list:
+    """
+    Busca las k tesis más similares usando similitud de coseno con pgvector
+    """
+    from sqlalchemy import text
+
+    # Convertir el embedding a string para la consulta SQL
+    embedding_str = f"[{','.join(map(str, embedding))}]"
+
+    query = text(
+        f"""
+        SELECT 
+            t.id,
+            t.title,
+            t.student_id,
+            s.name as student_name,
+            p1.name as advisor1_name,
+            p2.name as advisor2_name,
+            1 - (t.embedding <=> '{embedding_str}') as similarity_score
+        FROM theses t
+        JOIN students s ON t.student_id = s.id
+        JOIN professors p1 ON t.advisor1_id = p1.id
+        LEFT JOIN professors p2 ON t.advisor2_id = p2.id
+        WHERE t.embedding IS NOT NULL
+        ORDER BY t.embedding <=> '{embedding_str}'
+        LIMIT {k}
+    """
+    )
+
+    return db.execute(query).fetchall()
+
+
+def search_similar_research_products_by_embedding(
+    db: Session, embedding: list[float], k: int = 10
+) -> list:
+    """
+    Busca los k productos de investigación más similares usando similitud de coseno con pgvector
+    """
+    from sqlalchemy import text
+
+    # Convertir el embedding a string para la consulta SQL
+    embedding_str = f"[{','.join(map(str, embedding))}]"
+
+    query = text(
+        f"""
+        SELECT 
+            rp.id,
+            rp.title,
+            rp.site,
+            rp.year,
+            rp.professor_id,
+            p.name as professor_name,
+            l.name as laboratory_name,
+            1 - (rp.embedding <=> '{embedding_str}') as similarity_score
+        FROM research_products rp
+        JOIN professors p ON rp.professor_id = p.id
+        JOIN laboratories l ON p.laboratory_id = l.id
+        WHERE rp.embedding IS NOT NULL
+        ORDER BY rp.embedding <=> '{embedding_str}'
+        LIMIT {k}
+    """
+    )
+
+    return db.execute(query).fetchall()
+
+
+def get_thesis_by_id_with_embedding(db: Session, thesis_id: int):
+    """Obtiene una tesis por ID incluyendo su embedding"""
+    return (
+        db.query(models.Thesis)
+        .filter(models.Thesis.id == thesis_id, models.Thesis.embedding.is_not(None))
+        .first()
+    )
+
+
+def get_research_product_by_id_with_embedding(db: Session, product_id: int):
+    """Obtiene un producto de investigación por ID incluyendo su embedding"""
+    return (
+        db.query(models.ResearchProduct)
+        .filter(
+            models.ResearchProduct.id == product_id,
+            models.ResearchProduct.embedding.is_not(None),
+        )
+        .first()
+    )
+
+
+def get_all_theses_with_embeddings(db: Session):
+    """Obtiene todas las tesis que tienen embeddings para análisis de clusters"""
+    return (
+        db.query(models.Thesis)
+        .join(models.Student)
+        .join(models.Professor, models.Thesis.advisor1_id == models.Professor.id)
+        .filter(models.Thesis.embedding.is_not(None))
+        .all()
+    )
+
+
+def get_all_research_products_with_embeddings(
+    db: Session, min_year: int = None, max_year: int = None
+):
+    """Obtiene todos los productos de investigación que tienen embeddings para análisis de clusters"""
+    query = (
+        db.query(models.ResearchProduct)
+        .join(models.Professor)
+        .join(models.Laboratory)
+        .filter(models.ResearchProduct.embedding.is_not(None))
+    )
+
+    if min_year:
+        query = query.filter(models.ResearchProduct.year >= min_year)
+    if max_year:
+        query = query.filter(models.ResearchProduct.year <= max_year)
+
+    return query.all()
+
+
+def get_research_products_by_year_range_with_embeddings(
+    db: Session, start_year: int, end_year: int
+):
+    """Obtiene productos de investigación por rango de años que tienen embeddings"""
+    return (
+        db.query(models.ResearchProduct)
+        .join(models.Professor)
+        .join(models.Laboratory)
+        .filter(
+            models.ResearchProduct.year >= start_year,
+            models.ResearchProduct.year <= end_year,
+            models.ResearchProduct.embedding.is_not(None),
+        )
+        .all()
+    )
+
+
+def get_laboratory_by_id(db: Session, laboratory_id: int) -> models.Laboratory | None:
+    return (
+        db.query(models.Laboratory)
+        .filter(models.Laboratory.id == laboratory_id)
+        .first()
+    )
+
+
 def create_professor(
     db: Session, professor: schemas.ProfessorCreate
 ) -> models.Professor:

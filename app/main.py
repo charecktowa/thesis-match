@@ -3,12 +3,14 @@ import uvicorn
 
 from app.api.routes import professor
 from app.api.routes import student
+from app.api.routes import recommendation
 
 app = FastAPI()
 
 # Include routers
 app.include_router(professor.router, prefix="/api/v1")
 app.include_router(student.router, prefix="/api/v1")
+app.include_router(recommendation.router, prefix="/api/v1")
 
 
 @app.get("/")

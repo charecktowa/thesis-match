@@ -77,7 +77,7 @@ class ResearchProduct(Base):
     site = Column(String, nullable=False)
     year = Column(Integer, nullable=False)
 
-    embedding = Column(Vector(768), nullable=True)
+    embedding = Column(Vector(1024), nullable=True)
 
     # Cada producto de investigación pertenece a un profesor
     professor_id = Column(Integer, ForeignKey("professors.id"), nullable=False)
@@ -134,7 +134,7 @@ class Thesis(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=False)
     title = Column(String, nullable=False)
 
-    embedding = Column(Vector(768), nullable=True)
+    embedding = Column(Vector(1024), nullable=True)
 
     # Foreign key to student
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)

@@ -16,3 +16,12 @@ sentence-transformers
 torch==2.8.0
 
 pgvector
+
+dashscope
+
+# Para clustering y análisis
+scikit-learn
+
+numpy
+
+python-dotenv

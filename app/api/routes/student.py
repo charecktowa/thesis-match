@@ -142,7 +142,7 @@ async def read_student_thesis(student_id: int, db: Session = Depends(get_db)):
 
 @router.get(
     "/students/program/{program}",
-    response_model=List[schemas.StudentWithAcademicInfo],
+    response_model=list[schemas.StudentWithAcademicInfo],
     tags=["students"],
 )
 async def read_students_by_program(program: str, db: Session = Depends(get_db)):

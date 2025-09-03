@@ -172,3 +172,66 @@ class StudentWithThesis(BaseModel):
     profile_url: str | None = None
     thesis: ThesisRead | None = None
     academic_programs: list[AcademicProgramRead] = []
+
+
+# Esquemas para sistema de recomendaciones
+class RecommendationRequest(BaseModel):
+    query: str
+    k: int = 10
+    include_theses: bool = True
+    include_research_products: bool = True
+
+
+class ThesisRecommendation(BaseModel):
+    id: int
+    title: str
+    student_id: int
+    student_name: str
+    advisor1_name: str
+    advisor2_name: str | None = None
+    similarity_score: float
+
+
+class ResearchProductRecommendation(BaseModel):
+    id: int
+    title: str
+    site: str
+    year: int
+    professor_id: int
+    professor_name: str
+    laboratory_name: str
+    similarity_score: float
+
+
+class RecommendationResponse(BaseModel):
+    query: str
+    theses: list[ThesisRecommendation] = []
+    research_products: list[ResearchProductRecommendation] = []
+    total_results: int
+
+
+class SimilaritySearchRequest(BaseModel):
+    thesis_id: int | None = None
+    research_product_id: int | None = None
+    k: int = 10
+    search_type: str = "both"  # "theses", "research_products", "both"
+
+
+class ClusterAnalysisRequest(BaseModel):
+    entity_type: str  # "theses" or "research_products"
+    n_clusters: int = 5
+    min_year: int | None = None
+    max_year: int | None = None
+
+
+class ClusterResult(BaseModel):
+    cluster_id: int
+    items: list[dict]  # Contains either theses or research products
+    cluster_center: list[float]
+    cluster_size: int
+
+
+class ClusterAnalysisResponse(BaseModel):
+    entity_type: str
+    clusters: list[ClusterResult]
+    total_items: int
